@@ -1,0 +1,121 @@
+---
+timestamp: 'Sun Oct 19 2025 01:05:12 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251019_010512.56841c14.md]]'
+content_id: b86267ba17fbcb8af0001fa7dbdf8728c93960197054c0b387309d5b5a64c597
+---
+
+# file: src/concepts/DueStack/UserIdentityConcept.test.ts
+
+```typescript
+import { assertEquals, assertExists, assertNotEquals } from "jsr:@std/assert";
+import { testDb } from "@utils/database.ts";
+import { ID } from "@utils/types.ts";
+import UserIdentityConcept from "./UserIdentityConcept.ts"; // Updated import path
+
+const TEST_EMAIL_1 = "alice@example.com";
+const TEST_NAME_1 = "Alice Smith";
+const TEST_NAME_2 = "Bob Johnson";
+
+Deno.test("Principle: New user identities can be created, storing their unique email and display name.", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db); // Updated class name
+
+  try {
+    // 1. Create a new user identity
+    const createUserResult = await userIdentityConcept.createUser({ // Updated class name
+      email: TEST_EMAIL_1,
+      name: TEST_NAME_1,
+    });
+    assertNotEquals("error" in createUserResult, true, "User identity creation should not fail.");
+    const { user: userId } = createUserResult as { user: ID };
+    assertExists(userId, "A user ID should be returned on successful creation.");
+
+    // 2. Their core information is stored
+    const storedUser = await userIdentityConcept._getUserById({ userId }); // Updated class name
+    assertExists(storedUser, "The created user identity should exist in the database.");
+    assertEquals(storedUser?.email, TEST_EMAIL_1, "Stored user email should match.");
+    assertEquals(storedUser?.name, TEST_NAME_1, "Stored user name should match.");
+
+    // 3. Their existence is tracked (e.g., through a query for all users)
+    const allUsers = await userIdentityConcept._getAllUsers(); // Updated class name
+    assertEquals(allUsers.length, 1, "There should be one user identity in the system.");
+    assertEquals(allUsers[0]._id, userId, "The retrieved user ID should match the created one.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Action: createUser - successfully creates a unique user identity", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db); // Updated class name
+
+  try {
+    const result = await userIdentityConcept.createUser({ // Updated class name
+      email: TEST_EMAIL_1,
+      name: TEST_NAME_1,
+    });
+    assertNotEquals("error" in result, true, "User identity creation should succeed.");
+    const { user: userId } = result as { user: ID };
+    assertExists(userId, "User ID should be returned.");
+
+    const retrievedUser = await userIdentityConcept._getUserByEmail({ email: TEST_EMAIL_1 }); // Updated class name
+    assertExists(retrievedUser, "User identity should be retrievable by email.");
+    assertEquals(retrievedUser?._id, userId, "Retrieved user ID should match.");
+    assertEquals(retrievedUser?.name, TEST_NAME_1, "Retrieved user name should match.");
+
+    const totalUsers = await userIdentityConcept._getAllUsers(); // Updated class name
+    assertEquals(totalUsers.length, 1, "There should be exactly one user identity after successful creation.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Action: createUser - requires email to be unique", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db); // Updated class name
+
+  try {
+    // Create first user successfully
+    const result1 = await userIdentityConcept.createUser({ // Updated class name
+      email: TEST_EMAIL_1,
+      name: TEST_NAME_1,
+    });
+    assertNotEquals("error" in result1, true, "First user identity creation should succeed.");
+
+    // Attempt to create a second user with the same email
+    const result2 = await userIdentityConcept.createUser({ // Updated class name
+      email: TEST_EMAIL_1,
+      name: TEST_NAME_2, // Different name, same email
+    });
+    assertEquals("error" in result2, true, "Second user identity creation with same email should fail.");
+    assertEquals(
+      (result2 as { error: string }).error,
+      `User with email '${TEST_EMAIL_1}' already exists. Email must be unique.`,
+      "Error message should indicate email uniqueness violation.",
+    );
+
+    // Verify only one user identity exists in the database
+    const allUsers = await userIdentityConcept._getAllUsers(); // Updated class name
+    assertEquals(allUsers.length, 1, "Only one user identity should exist after a failed creation attempt.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Query: _getUserById and _getUserByEmail return null for non-existent user identities", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db); // Updated class name
+
+  try {
+    const nonExistentId = "user:nonexistent" as ID;
+    const userById = await userIdentityConcept._getUserById({ userId: nonExistentId }); // Updated class name
+    assertEquals(userById, null, "Should return null for a non-existent user ID.");
+
+    const userByEmail = await userIdentityConcept._getUserByEmail({ email: "nonexistent@example.com" }); // Updated class name
+    assertEquals(userByEmail, null, "Should return null for a non-existent email.");
+  } finally {
+    await client.close();
+  }
+});
+
+```

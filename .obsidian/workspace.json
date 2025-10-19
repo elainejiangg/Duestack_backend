@@ -6,6 +6,7 @@
       {
         "id": "0191866cebf1b7c3",
         "type": "tabs",
+        "dimension": 51.66393889798145,
         "children": [
           {
             "id": "60ccb8b74e272dda",
@@ -13,12 +14,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "design/brainstorming/questioning.md",
+                "file": "design/learning/update-duestack-concepts.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "questioning"
+              "title": "update-duestack-concepts"
             }
           },
           {
@@ -27,36 +28,80 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "design/background/testing-concepts.md",
+                "file": "design/learning/update-duestack-concepts.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "testing-concepts"
+              "title": "update-duestack-concepts"
             }
-          }
-        ],
-        "currentTab": 1
-      },
-      {
-        "id": "55052282011fa2b5",
-        "type": "tabs",
-        "children": [
+          },
           {
             "id": "65ef3251d67d70e9",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
+                "file": "context/README.md/20251019_190021.45c6069d.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "20251019_190021.45c6069d"
             }
           }
-        ]
+        ],
+        "currentTab": 2
+      },
+      {
+        "id": "e0d27622fedd8dd6",
+        "type": "split",
+        "dimension": 48.336061102018554,
+        "children": [
+          {
+            "id": "0c72057be4732b7e",
+            "type": "tabs",
+            "dimension": 75.53269654665688,
+            "children": [
+              {
+                "id": "c7a5c50b06d666b2",
+                "type": "leaf",
+                "state": {
+                  "type": "markdown",
+                  "state": {
+                    "file": "README.md",
+                    "mode": "source",
+                    "source": false
+                  },
+                  "icon": "lucide-file",
+                  "title": "README"
+                }
+              }
+            ]
+          },
+          {
+            "id": "1adb63c54218ce4b",
+            "type": "tabs",
+            "dimension": 24.46730345334313,
+            "children": [
+              {
+                "id": "5c8513213ade576a",
+                "type": "leaf",
+                "state": {
+                  "type": "markdown",
+                  "state": {
+                    "file": "design/concepts/DueStack-specs/SuggestionManagementConcept.md",
+                    "mode": "source",
+                    "source": false
+                  },
+                  "icon": "lucide-file",
+                  "title": "SuggestionManagementConcept"
+                }
+              }
+            ]
+          }
+        ],
+        "direction": "horizontal"
       }
     ],
     "direction": "vertical"
@@ -129,7 +174,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "README.md",
+                "file": "context/README.md/20251019_190021.45c6069d.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -139,7 +184,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for README"
+              "title": "Backlinks for 20251019_190021.45c6069d"
             }
           },
           {
@@ -206,35 +251,43 @@
   },
   "active": "65ef3251d67d70e9",
   "lastOpenFiles": [
-    "design/background/testing-concepts.md",
-    "design/background/implementing-concepts.md",
-    "design/background/detailed/concept-rubric.md",
-    "design/concepts/LikertSurvey/LikertSurvey.md",
-    "design/concepts/LikertSurvey/implementation.md",
-    "design/brainstorming/questioning.md",
-    "design/concepts/LikertSurvey/testing.md",
-    "design/learning/exercise-0.md",
-    "context/design/learning/exercise-0.md/20251018_171442.8964dfcf.md",
-    "context/design/brainstorming/questioning.md/20251018_171228.335b2810.md",
-    "context/design/learning/exercise-0.md/steps/_.8e8e7c06.md",
-    "context/design/learning/exercise-0.md/steps",
-    "context/design/learning/exercise-0.md",
-    "context/design/brainstorming/questioning.md/steps/response.aeca9125.md",
-    "context/design/brainstorming/questioning.md/20251018_165713.4cc9d23d.md",
-    "context/design/brainstorming/questioning.md/20251018_165659.20c62d3c.md",
-    "context/design/brainstorming/questioning.md/20251007_210412.34d993fb.md",
-    "context/design/brainstorming/questioning.md/20251007_210354.dbfa3313.md",
-    "context/design/background/concept-design-brief.md/20251007_212651.c51bb8f5.md",
+    "design/concepts/DueStack-concept-design-files/DueStack-overall-design.md",
+    "design/concepts/DueStack-specs/DocumentManagementConcept.md",
     "README.md",
-    "design/learning/understanding-concepts.md",
-    "context/design/learning/understanding-concepts.md/20251018_170322.57c0ddff.md",
-    "context/design/learning/understanding-concepts.md/steps/response.4e08ca27.md",
-    "context/design/learning/understanding-concepts.md/20251018_170306.1328f4bf.md",
-    "context/design/learning/understanding-concepts.md/steps/questions.33e2a0d5.md",
-    "ctx",
-    "ctx.tmp-373f7bd8bbea719e",
+    "context/README.md/steps/_.5e828427.md",
+    "context/README.md/steps",
+    "context/README.md/20251019_190021.45c6069d.md",
+    "context/README.md",
+    "old-README.md",
+    "design/concepts/DueStack-concept-design-files/DocumentManagementConcept-design.md",
+    "design/concepts/DueStack-concept-design-files/SuggestionManagementConcept-design.md",
+    "design/concepts/DueStack-concept-design-files/DeadlineManagementConcept-design.md",
+    "design/concepts/DueStack-concept-design-files/CourseManagementConcept-design.md",
+    "design/concepts/DueStack-concept-design-files/UserAuthenticationConcept-design.md",
+    "design/concepts/DueStack-concept-design-files/UserIdentityConcept-design.md",
+    "design/test-outputs/DocumentManagementConcept-test-output.md",
+    "design/test-outputs/SuggestionManagementConcept-test-output.md",
+    "design/test-outputs/CourseManagementConcept-test-output.md",
+    "design/test-outputs/DeadlineManagementConcept-test-output.md",
+    "design/test-outputs/UserAuthenticationConcept-test-output.md",
+    "design/test-outputs/UserIdentityConcept-test-output.md",
+    "design/concepts/notes/DueStack-design-notes.md",
+    "design/concepts/DueStack-specs/DeadlineManagementConcept.md",
+    "design/concepts/DueStack-specs/CourseManagementConcept.md",
+    "design/concepts/DueStack-specs/SuggestionManagementConcept.md",
+    "design/concepts/DueStack-brainstorming/DueStack-new-concepts.md",
+    "design/concepts/DueStack-specs/UserAuthenticationConcept.md",
+    "design/concepts/DueStack-specs/UserIdentityConcept.md",
+    "context/design/DueStack-overall-design.md/steps",
+    "context/design/SuggestionManagementConcept-design.md/steps",
+    "context/design/DocumentManagementConcept-design.md/steps",
+    "context/design/DeadlineManagementConcept-design.md/steps",
+    "context/design/CourseManagementConcept-design.md/steps",
+    "context/design/UserAuthenticationConcept-design.md/steps",
+    "context/design/UserIdentityConcept-design.md/steps",
+    "context/design/concepts/DueStack-specs/SuggestionManagementConcept.md/steps",
+    "context/design/concepts/DueStack-specs/DocumentManagementConcept.md/steps",
     "media/obsidian_settings.png",
-    "design/background/concept-specifications.md",
-    "design/background/concept-design-overview.md"
+    "media/linking.png"
   ]
 }

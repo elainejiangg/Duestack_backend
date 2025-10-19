@@ -1,0 +1,238 @@
+---
+timestamp: 'Sun Oct 19 2025 01:15:26 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251019_011526.2a963ae0.md]]'
+content_id: 5263b19cdfdae532f50f8b70ce219799a8f97d793387f3241d7e4be6ec161c4a
+---
+
+# file: src/concepts/DueStack/UserAuthenticationConcept.test.ts
+
+```typescript
+import { assertEquals, assertExists, assertNotEquals, assertNotStrictEquals, assertStrictEquals } from "jsr:@std/assert";
+import { testDb } from "@utils/database.ts";
+import { ID } from "@utils/types.ts";
+import { freshID } from "@utils/database.ts"; // FIXED: Added import for freshID
+import UserIdentityConcept from "./UserIdentityConcept.ts"; // FIXED: Corrected relative import path
+import UserAuthenticationConcept from "./UserAuthenticationConcept.ts"; // FIXED: Corrected relative import path
+
+
+const TEST_EMAIL_ALICE = "alice@example.com";
+const TEST_NAME_ALICE = "Alice Smith";
+const TEST_USERNAME_ALICE = "alice_smith";
+const TEST_PASSWORD_ALICE = "securePass123";
+const TEST_PASSWORD_ALICE_NEW = "evenMoreSecure456";
+const TEST_CANVAS_TOKEN_ALICE = "mock_canvas_token_abc123";
+
+const TEST_EMAIL_BOB = "bob@example.com";
+const TEST_NAME_BOB = "Bob Johnson";
+const TEST_USERNAME_BOB = "bob_j";
+const TEST_PASSWORD_BOB = "BobSecure456";
+
+Deno.test("Principle: A user can register, log in, and log out.", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db);
+  const userAuthConcept = new UserAuthenticationConcept(db);
+
+  try {
+    // Setup: Create a UserIdentity first (as UserAuthentication uses User IDs)
+    const createUserResult = await userIdentityConcept.createUser({
+      email: TEST_EMAIL_ALICE,
+      name: TEST_NAME_ALICE,
+    });
+    assertNotEquals("error" in createUserResult, true, "UserIdentity creation should succeed.");
+    const { user: aliceUserId } = createUserResult as { user: ID };
+    assertExists(aliceUserId);
+
+    // 1. A user can register with a unique username and password
+    const registerResult = await userAuthConcept.register({
+      user: aliceUserId,
+      username: TEST_USERNAME_ALICE,
+      password: TEST_PASSWORD_ALICE,
+    });
+    // FIXED: Removed problematic `registerResult.error` access on success path
+    assertEquals("error" in registerResult, false, `Registration should succeed.`);
+
+    const registeredUser = await userAuthConcept._getAuthenticatedUserByUser({ user: aliceUserId });
+    assertExists(registeredUser, "Registered user should exist in AuthenticatedUsers collection.");
+    assertEquals(registeredUser?.username, TEST_USERNAME_ALICE);
+
+    // 2. Log in to establish a session
+    const loginResult = await userAuthConcept.login({
+      username: TEST_USERNAME_ALICE,
+      password: TEST_PASSWORD_ALICE,
+    });
+    // FIXED: Removed problematic `loginResult.error` access on success path
+    assertEquals("error" in loginResult, false, `Login should succeed.`);
+    const { sessionID, user: loggedInUserId } = loginResult as { sessionID: string; user: ID };
+    assertExists(sessionID, "Session ID should be generated.");
+    assertStrictEquals(loggedInUserId, aliceUserId, "Logged in user ID should match.");
+
+    const authUserAfterLogin = await userAuthConcept._getAuthenticatedUserByUser({ user: aliceUserId });
+    assertEquals(authUserAfterLogin?.sessionID, sessionID, "Session ID should be stored in the state.");
+
+    // 3. Log out to end it
+    const logoutResult = await userAuthConcept.logout({ sessionID });
+    assertEquals("error" in logoutResult, false, `Logout should succeed.`);
+
+    const authUserAfterLogout = await userAuthConcept._getAuthenticatedUserByUser({ user: aliceUserId });
+    assertEquals(authUserAfterLogout?.sessionID, undefined, "Session ID should be cleared after logout.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Action: register - enforces unique usernames and password complexity", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db);
+  const userAuthConcept = new UserAuthenticationConcept(db);
+
+  try {
+    const createUserResult = await userIdentityConcept.createUser({ email: TEST_EMAIL_ALICE, name: TEST_NAME_ALICE });
+    const { user: aliceUserId } = createUserResult as { user: ID };
+
+    // Valid registration
+    const registerResult = await userAuthConcept.register({ user: aliceUserId, username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE });
+    assertEquals("error" in registerResult, false, "Valid registration should succeed.");
+
+    // Attempt to register with a duplicate username
+    const createUserResult2 = await userIdentityConcept.createUser({ email: TEST_EMAIL_BOB, name: TEST_NAME_BOB });
+    const { user: bobUserId } = createUserResult2 as { user: ID };
+
+    const duplicateUsernameResult = await userAuthConcept.register({ user: bobUserId, username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_BOB });
+    assertEquals("error" in duplicateUsernameResult, true, "Registration with duplicate username should fail.");
+    assertEquals((duplicateUsernameResult as { error: string }).error, `Username '${TEST_USERNAME_ALICE}' is already taken.`);
+
+    // Attempt to register with a weak password (less than 8 characters)
+    // Corrected `freshID()` usage and import
+    const weakPasswordResult = await userAuthConcept.register({ user: freshID() as ID, username: "weakuser", password: "weak" });
+    assertEquals("error" in weakPasswordResult, true, "Registration with weak password should fail.");
+    assertEquals((weakPasswordResult as { error: string }).error, "Password does not meet complexity requirements (min 8 characters).");
+
+    const authUsers = await userAuthConcept.authenticatedUsers.find({}).toArray();
+    assertEquals(authUsers.length, 1, "Only one authenticated user should exist.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Action: login - handles invalid credentials", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db);
+  const userAuthConcept = new UserAuthenticationConcept(db);
+
+  try {
+    const createUserResult = await userIdentityConcept.createUser({ email: TEST_EMAIL_ALICE, name: TEST_NAME_ALICE });
+    const { user: aliceUserId } = createUserResult as { user: ID };
+    await userAuthConcept.register({ user: aliceUserId, username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE });
+
+    // Invalid username
+    const invalidUsernameResult = await userAuthConcept.login({ username: "wrong_user", password: TEST_PASSWORD_ALICE });
+    assertEquals("error" in invalidUsernameResult, true, "Login with invalid username should fail.");
+    assertEquals((invalidUsernameResult as { error: string }).error, "Invalid username or password.");
+
+    // Invalid password
+    const invalidPasswordResult = await userAuthConcept.login({ username: TEST_USERNAME_ALICE, password: "wrong_password" });
+    assertEquals("error" in invalidPasswordResult, true, "Login with invalid password should fail.");
+    assertEquals((invalidPasswordResult as { error: string }).error, "Invalid username or password.");
+
+    const authUser = await userAuthConcept._getAuthenticatedUserByUser({ user: aliceUserId });
+    assertEquals(authUser?.sessionID, undefined, "Session ID should not be set for failed login attempts.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Action: logout - handles invalid session ID", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db);
+  const userAuthConcept = new UserAuthenticationConcept(db);
+
+  try {
+    const createUserResult = await userIdentityConcept.createUser({ email: TEST_EMAIL_ALICE, name: TEST_NAME_ALICE });
+    const { user: aliceUserId } = createUserResult as { user: ID };
+    await userAuthConcept.register({ user: aliceUserId, username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE });
+
+    const loginResult = await userAuthConcept.login({ username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE });
+    const { sessionID } = loginResult as { sessionID: string; user: ID };
+
+    // Attempt to logout with a non-existent session ID
+    const invalidSessionResult = await userAuthConcept.logout({ sessionID: "fake_session_id" });
+    assertEquals("error" in invalidSessionResult, true, "Logout with invalid session ID should fail.");
+    assertEquals((invalidSessionResult as { error: string }).error, "Invalid or expired session ID.");
+
+    const authUser = await userAuthConcept._getAuthenticatedUserByUser({ user: aliceUserId });
+    assertEquals(authUser?.sessionID, sessionID, "Session ID should remain active if logout fails for another session.");
+
+    // Successful logout
+    const logoutResult = await userAuthConcept.logout({ sessionID });
+    assertEquals("error" in logoutResult, false, `Logout should succeed.`);
+    const authUserAfterLogout = await userAuthConcept._getAuthenticatedUserByUser({ user: aliceUserId });
+    assertEquals(authUserAfterLogout?.sessionID, undefined, "Session ID should be cleared after successful logout.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Action: changePassword - handles incorrect old password or weak new password", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db);
+  const userAuthConcept = new UserAuthenticationConcept(db);
+
+  try {
+    const createUserResult = await userIdentityConcept.createUser({ email: TEST_EMAIL_ALICE, name: TEST_NAME_ALICE });
+    const { user: aliceUserId } = createUserResult as { user: ID };
+    await userAuthConcept.register({ user: aliceUserId, username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE });
+
+    // Incorrect old password
+    const wrongOldPassResult = await userAuthConcept.changePassword({ user: aliceUserId, oldPassword: "wrong_password", newPassword: TEST_PASSWORD_ALICE_NEW });
+    assertEquals("error" in wrongOldPassResult, true, "Changing password with incorrect old password should fail.");
+    assertEquals((wrongOldPassResult as { error: string }).error, "Old password does not match.");
+
+    // New password too weak
+    const weakNewPassResult = await userAuthConcept.changePassword({ user: aliceUserId, oldPassword: TEST_PASSWORD_ALICE, newPassword: "weak" });
+    assertEquals("error" in weakNewPassResult, true, "Changing password to a weak new password should fail.");
+    assertEquals((weakNewPassResult as { error: string }).error, "New password does not meet complexity requirements (min 8 characters).");
+
+    // Successful password change
+    const changePassResult = await userAuthConcept.changePassword({ user: aliceUserId, oldPassword: TEST_PASSWORD_ALICE, newPassword: TEST_PASSWORD_ALICE_NEW });
+    assertEquals("error" in changePassResult, false, "Valid password change should succeed.");
+
+    // Verify login with new password
+    const loginWithNewPass = await userAuthConcept.login({ username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE_NEW });
+    assertEquals("error" in loginWithNewPass, false, "Login with new password should succeed.");
+
+    // Verify old password no longer works
+    const loginWithOldPass = await userAuthConcept.login({ username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE });
+    assertEquals("error" in loginWithOldPass, true, "Login with old password should now fail.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("Action: connectCanvas - successfully stores Canvas OAuth token", async () => {
+  const [db, client] = await testDb();
+  const userIdentityConcept = new UserIdentityConcept(db);
+  const userAuthConcept = new UserAuthenticationConcept(db);
+
+  try {
+    const createUserResult = await userIdentityConcept.createUser({ email: TEST_EMAIL_ALICE, name: TEST_NAME_ALICE });
+    const { user: aliceUserId } = createUserResult as { user: ID };
+    await userAuthConcept.register({ user: aliceUserId, username: TEST_USERNAME_ALICE, password: TEST_PASSWORD_ALICE });
+
+    // Connect Canvas account
+    const connectCanvasResult = await userAuthConcept.connectCanvas({ user: aliceUserId, canvasOAuthToken: TEST_CANVAS_TOKEN_ALICE });
+    assertEquals("error" in connectCanvasResult, false, "Connecting Canvas should succeed.");
+
+    // Verify token is stored
+    const authUser = await userAuthConcept._getAuthenticatedUserByUser({ user: aliceUserId });
+    assertEquals(authUser?.canvasOAuthToken, TEST_CANVAS_TOKEN_ALICE, "Canvas OAuth token should be stored.");
+
+    // Attempt to connect Canvas for non-existent user
+    const nonExistentUserId = "user:nonexistent" as ID;
+    const nonExistentUserConnectResult = await userAuthConcept.connectCanvas({ user: nonExistentUserId, canvasOAuthToken: "another_token" });
+    assertEquals("error" in nonExistentUserConnectResult, true, "Connecting Canvas for non-existent user should fail.");
+    assertEquals((nonExistentUserConnectResult as { error: string }).error, "User not found.");
+  } finally {
+    await client.close();
+  }
+});
+```
