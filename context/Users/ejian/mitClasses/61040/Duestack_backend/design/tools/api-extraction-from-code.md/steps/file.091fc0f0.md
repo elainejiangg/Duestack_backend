@@ -1,0 +1,335 @@
+---
+timestamp: 'Tue Oct 21 2025 10:47:49 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251021_104749.839987d5.md]]'
+content_id: 091fc0f0e5f10a4e0367ca60314a84d9c190d484fa8ff818a80515a769fcdda4
+---
+
+# file: /Users/ejian/mitClasses/61040/Duestack\_backend/src/concepts/DueStack/SuggestionManagementConcept.test.ts
+
+```typescript
+import { assertEquals, assertExists, assertNotEquals } from "jsr:@std/assert";
+import { testDb } from "@utils/database.ts";
+import { ID } from "@utils/types.ts";
+import { freshID } from "@utils/database.ts"; // Required for generating document IDs in mock data
+import SuggestionManagementConcept from "./SuggestionManagementConcept.ts";
+
+const userA = "user:Alice" as ID;
+const document1 = "document:doc1" as ID;
+const document2 = "document:doc2" as ID; // Added for multi-document test
+const courseX = "course:CS101" as ID;
+const LLM_CONFIG_NAME = "default_llm_config";
+const CANVAS_CONFIG_NAME = "default_canvas_config";
+
+Deno.test("SuggestionManagement: Principle - Suggestions produced, refined, and confirmed", async () => {
+  const [db, client] = await testDb();
+  const suggestionConcept = new SuggestionManagementConcept(db);
+
+  try {
+    // Setup: Create LLM and Canvas configs
+    const createLlmConfigResult = await suggestionConcept.createExtractionConfig({
+      name: LLM_CONFIG_NAME,
+      modelVersion: "LLaMA-3",
+      basePromptTemplate: "Extract deadlines from text.",
+      maxTokens: 500,
+      temperature: 0.7,
+      timezone: "America/New_York",
+    });
+    assertNotEquals("error" in createLlmConfigResult, true, "LLM config creation should succeed.");
+    const { config: llmConfig } = createLlmConfigResult as { config: ID };
+
+    const createCanvasConfigResult = await suggestionConcept.createExtractionConfig({
+      name: CANVAS_CONFIG_NAME,
+      modelVersion: "CANVAS_JSON",
+      basePromptTemplate: "Parse Canvas JSON for deadlines.",
+      maxTokens: 500,
+      temperature: 0.0,
+      timezone: "America/New_York",
+    });
+    assertNotEquals("error" in createCanvasConfigResult, true, "Canvas config creation should succeed.");
+    // const { config: canvasConfig } = createCanvasConfigResult as { config: ID }; // Not directly used in this principle trace
+
+    // 1. Suggestions are produced via an LLM from uploaded files (simulated)
+    const docContent = "Assignment 1 due on 2025-09-15. Final project due Dec 20, 2025.";
+    const extractDocResult = await suggestionConcept.llmExtractFromDocument({
+      user: userA,
+      documentId: document1,
+      documentContent: docContent,
+      config: llmConfig,
+    });
+    assertNotEquals("error" in extractDocResult, true, "LLM extraction from document should succeed.");
+    const { suggestions: docSuggestions } = extractDocResult as { suggestions: ID[] };
+    assertEquals(docSuggestions.length, 2, "Should extract 2 suggestions from document.");
+
+    const s1 = await suggestionConcept._getSuggestionById({ suggestion: docSuggestions[0] });
+    assertExists(s1);
+    assertEquals(s1.title, "Assignment 1: Introduction");
+    assertEquals(s1.user, userA);
+    assertEquals(s1.document, document1);
+    assertEquals(s1.confirmed, false);
+
+    // 2. User refines a suggestion
+    const refineResult = await suggestionConcept.refineWithFeedback({
+      suggestion: s1._id,
+      feedback: "The due time should be 11:59 PM.",
+      config: llmConfig,
+    });
+    assertNotEquals("error" in refineResult, true, "Refinement should succeed.");
+    const refinedS1 = await suggestionConcept._getSuggestionById({ suggestion: s1._id });
+    assertExists(refinedS1);
+    assertEquals(refinedS1.due.getHours(), 23, "Due hour should be updated to 23 (11 PM).");
+    assertEquals(refinedS1.due.getMinutes(), 59, "Due minute should be updated to 59.");
+    assertExists(refinedS1.warnings?.includes("Refined by user feedback"), "Warnings should include 'Refined by user feedback'.");
+
+    // 3. User edits a suggestion manually
+    const newDate = new Date(refinedS1.due.getFullYear(), refinedS1.due.getMonth(), refinedS1.due.getDate() + 1, 23, 59);
+    const editResult = await suggestionConcept.editSuggestion({
+      suggestion: s1._id,
+      newTitle: "Revised Assignment 1",
+      newDue: newDate,
+    });
+    assertEquals("error" in editResult, false, "Manual edit should succeed.");
+    const editedS1 = await suggestionConcept._getSuggestionById({ suggestion: s1._id });
+    assertExists(editedS1);
+    assertEquals(editedS1.title, "Revised Assignment 1");
+    assertEquals(editedS1.due.getDate(), s1.due.getDate() + 1, "Date should be incremented by 1.");
+    assertExists(editedS1.warnings?.includes("Manually edited"), "Warnings should include 'Manually edited'.");
+
+    // 4. Users confirm suggestions before they become official deadlines
+    const confirmResult = await suggestionConcept.confirm({
+      suggestion: s1._id,
+      course: courseX,
+      addedBy: userA,
+    });
+    assertNotEquals("error" in confirmResult, true, "Confirmation should succeed.");
+    const confirmedS1 = await suggestionConcept._getSuggestionById({ suggestion: s1._id });
+    assertExists(confirmedS1);
+    assertEquals(confirmedS1.confirmed, true, "Suggestion should be marked as confirmed.");
+
+    const { course, title, due, source, addedBy } = confirmResult as {
+      course: ID;
+      title: string;
+      due: Date;
+      source: string;
+      addedBy: ID;
+    };
+    assertEquals(course, courseX);
+    assertEquals(title, editedS1.title);
+    assertEquals(due, editedS1.due);
+    assertEquals(source, editedS1.source);
+    assertEquals(addedBy, userA);
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("SuggestionManagement: createExtractionConfig requires unique name", async () => {
+  const [db, client] = await testDb();
+  const suggestionConcept = new SuggestionManagementConcept(db);
+
+  try {
+    const createResult1 = await suggestionConcept.createExtractionConfig({
+      name: "unique_config",
+      modelVersion: "v1",
+      basePromptTemplate: "",
+      maxTokens: 100,
+      temperature: 0.5,
+      timezone: "UTC",
+    });
+    assertEquals("error" in createResult1, false, "First config creation should succeed.");
+
+    const createResult2 = await suggestionConcept.createExtractionConfig({
+      name: "unique_config",
+      modelVersion: "v2",
+      basePromptTemplate: "",
+      maxTokens: 100,
+      temperature: 0.5,
+      timezone: "UTC",
+    });
+    assertEquals("error" in createResult2, true, "Second config with same name should fail.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("SuggestionManagement: llmExtractFromDocument handles invalid config/content", async () => {
+  const [db, client] = await testDb();
+  const suggestionConcept = new SuggestionManagementConcept(db);
+  const fakeConfigId = "config:fake" as ID;
+
+  try {
+    const result1 = await suggestionConcept.llmExtractFromDocument({
+      user: userA,
+      documentId: document1,
+      documentContent: "some content",
+      config: fakeConfigId,
+    });
+    assertEquals("error" in result1, true, "Should fail with non-existent config.");
+
+    const { config: llmConfig } = (await suggestionConcept.createExtractionConfig({
+      name: LLM_CONFIG_NAME,
+      modelVersion: "v1",
+      basePromptTemplate: "",
+      maxTokens: 100,
+      temperature: 0.5,
+      timezone: "UTC",
+    })) as { config: ID };
+
+    const result2 = await suggestionConcept.llmExtractFromDocument({
+      user: userA,
+      documentId: document1,
+      documentContent: "",
+      config: llmConfig,
+    });
+    assertEquals("error" in result2, true, "Should fail with empty document content.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("SuggestionManagement: confirm requirements are enforced", async () => {
+  const [db, client] = await testDb();
+  const suggestionConcept = new SuggestionManagementConcept(db);
+
+  // Setup
+  const { config: llmConfig } = (await suggestionConcept.createExtractionConfig({
+    name: LLM_CONFIG_NAME,
+    modelVersion: "v1",
+    basePromptTemplate: "",
+    maxTokens: 100,
+    temperature: 0.5,
+    timezone: "UTC",
+  })) as { config: ID };
+  const docContent = "Assignment 1 due on 2025-09-15.";
+  const { suggestions: [s1Id] } = (await suggestionConcept.llmExtractFromDocument({
+    user: userA,
+    documentId: document1,
+    documentContent: docContent,
+    config: llmConfig,
+  })) as { suggestions: ID[] };
+
+  try {
+    // Already confirmed
+    await suggestionConcept.confirm({ suggestion: s1Id, course: courseX, addedBy: userA });
+    const res1 = await suggestionConcept.confirm({ suggestion: s1Id, course: courseX, addedBy: userA });
+    assertEquals("error" in res1, true, "Should fail if suggestion is already confirmed.");
+
+    // Non-existent suggestion
+    const fakeSuggestionId = "suggestion:fake" as ID;
+    const res2 = await suggestionConcept.confirm({ suggestion: fakeSuggestionId, course: courseX, addedBy: userA });
+    assertEquals("error" in res2, true, "Should fail for non-existent suggestion.");
+
+    // Invalid title/due (simulated by modifying directly in DB)
+    await suggestionConcept.suggestions.updateOne({ _id: s1Id }, { $set: { title: "" } });
+    const res3 = await suggestionConcept.confirm({ suggestion: s1Id, course: courseX, addedBy: userA });
+    assertEquals("error" in res3, true, "Should fail if suggestion has invalid title.");
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("SuggestionManagement: llmExtractFromMultipleDocuments works with combined content", async () => {
+  const [db, client] = await testDb();
+  const suggestionConcept = new SuggestionManagementConcept(db);
+
+  try {
+    const { config: llmConfig } = (await suggestionConcept.createExtractionConfig({
+      name: LLM_CONFIG_NAME,
+      modelVersion: "v1",
+      basePromptTemplate: "",
+      maxTokens: 100,
+      temperature: 0.5,
+      timezone: "UTC",
+    })) as { config: ID };
+
+    const docIds = [document1, document2];
+    const combinedContent = "Assignment 1 details here. Final project due date.";
+
+    const result = await suggestionConcept.llmExtractFromMultipleDocuments({
+      user: userA,
+      documentIds: docIds,
+      combinedDocumentContent: combinedContent,
+      config: llmConfig,
+    });
+    assertNotEquals("error" in result, true, "Multiple document extraction should succeed.");
+    const { suggestions } = result as { suggestions: ID[] };
+    assertEquals(suggestions.length, 2, "Should extract multiple suggestions from combined content.");
+    const s1 = await suggestionConcept._getSuggestionById({ suggestion: suggestions[0] });
+    assertExists(s1);
+    assertEquals(s1.user, userA);
+    // In simulation, provenance might just use the joined IDs, or a generic string.
+    assertExists(s1.provenance?.includes(document1.toString()) || s1.provenance?.includes("multi-document"));
+  } finally {
+    await client.close();
+  }
+});
+
+Deno.test("SuggestionManagement: editSuggestion/updateSuggestionTitle/Date updates and adds warnings", async () => {
+  const [db, client] = await testDb();
+  const suggestionConcept = new SuggestionManagementConcept(db);
+
+  try {
+    const { config: llmConfig } = (await suggestionConcept.createExtractionConfig({
+      name: LLM_CONFIG_NAME,
+      modelVersion: "v1",
+      basePromptTemplate: "",
+      maxTokens: 100,
+      temperature: 0.5,
+      timezone: "UTC",
+    })) as { config: ID };
+
+    const docContent = "Assignment X due 2025-10-01.";
+    const { suggestions: [s1Id] } = (await suggestionConcept.llmExtractFromDocument({
+      user: userA,
+      documentId: document1,
+      documentContent: docContent,
+      config: llmConfig,
+    })) as { suggestions: ID[] };
+
+    let s1 = await suggestionConcept._getSuggestionById({ suggestion: s1Id });
+    assertExists(s1);
+    assertEquals(s1.title, "Assignment 1: Introduction"); // Mock LLM always returns this for "assignment 1"
+    assertEquals(s1.due.getMonth(), 8); // Sept (0-indexed)
+
+    // Update title
+    const updateTitleResult = await suggestionConcept.updateSuggestionTitle({
+      suggestion: s1Id,
+      newTitle: "Revised Assignment X",
+    });
+    assertEquals("error" in updateTitleResult, false, "Updating title should succeed.");
+    s1 = await suggestionConcept._getSuggestionById({ suggestion: s1Id });
+    assertExists(s1);
+    assertEquals(s1.title, "Revised Assignment X");
+    assertExists(s1.warnings?.includes("Manually edited"), "Warnings should include 'Manually edited'.");
+
+    // Update date
+    const newDueDate = new Date(2025, 9, 15); // Oct 15
+    const updateDateResult = await suggestionConcept.updateSuggestionDate({
+      suggestion: s1Id,
+      newDue: newDueDate,
+    });
+    assertEquals("error" in updateDateResult, false, "Updating date should succeed.");
+    s1 = await suggestionConcept._getSuggestionById({ suggestion: s1Id });
+    assertExists(s1);
+    assertEquals(s1.due.getMonth(), 9); // Oct
+    assertEquals(s1.due.getDate(), 15);
+    assertEquals(s1.warnings?.length, 1, "Should still have one 'Manually edited' warning.");
+
+    // Edit both
+    const finalDueDate = new Date(2025, 10, 1); // Nov 1
+    const editBothResult = await suggestionConcept.editSuggestion({
+      suggestion: s1Id,
+      newTitle: "Final Assignment",
+      newDue: finalDueDate,
+    });
+    assertEquals("error" in editBothResult, false, "Editing both should succeed.");
+    s1 = await suggestionConcept._getSuggestionById({ suggestion: s1Id });
+    assertExists(s1);
+    assertEquals(s1.title, "Final Assignment");
+    assertEquals(s1.due.getMonth(), 10); // Nov
+    assertEquals(s1.due.getDate(), 1);
+    assertEquals(s1.warnings?.length, 1, "Should still have one 'Manually edited' warning.");
+  } finally {
+    await client.close();
+  }
+});
+```

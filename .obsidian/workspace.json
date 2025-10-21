@@ -42,12 +42,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "context/README.md/20251019_190021.45c6069d.md",
+                "file": "design/tools/api-extraction-from-code.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "20251019_190021.45c6069d"
+              "title": "api-extraction-from-code"
             }
           }
         ],
@@ -69,12 +69,12 @@
                 "state": {
                   "type": "markdown",
                   "state": {
-                    "file": "README.md",
+                    "file": "design/tools/api-extraction-from-spec.md",
                     "mode": "source",
                     "source": false
                   },
                   "icon": "lucide-file",
-                  "title": "README"
+                  "title": "api-extraction-from-spec"
                 }
               }
             ]
@@ -174,7 +174,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "context/README.md/20251019_190021.45c6069d.md",
+                "file": "design/tools/api-extraction-from-code.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -184,7 +184,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 20251019_190021.45c6069d"
+              "title": "Backlinks for api-extraction-from-code"
             }
           },
           {
@@ -251,42 +251,43 @@
   },
   "active": "65ef3251d67d70e9",
   "lastOpenFiles": [
-    "design/concepts/DueStack-concept-design-files/DueStack-overall-design.md",
-    "design/concepts/DueStack-specs/DocumentManagementConcept.md",
-    "README.md",
-    "context/README.md/steps/_.5e828427.md",
-    "context/README.md/steps",
-    "context/README.md/20251019_190021.45c6069d.md",
-    "context/README.md",
-    "old-README.md",
-    "design/concepts/DueStack-concept-design-files/DocumentManagementConcept-design.md",
-    "design/concepts/DueStack-concept-design-files/SuggestionManagementConcept-design.md",
-    "design/concepts/DueStack-concept-design-files/DeadlineManagementConcept-design.md",
-    "design/concepts/DueStack-concept-design-files/CourseManagementConcept-design.md",
-    "design/concepts/DueStack-concept-design-files/UserAuthenticationConcept-design.md",
-    "design/concepts/DueStack-concept-design-files/UserIdentityConcept-design.md",
-    "design/test-outputs/DocumentManagementConcept-test-output.md",
-    "design/test-outputs/SuggestionManagementConcept-test-output.md",
-    "design/test-outputs/CourseManagementConcept-test-output.md",
-    "design/test-outputs/DeadlineManagementConcept-test-output.md",
-    "design/test-outputs/UserAuthenticationConcept-test-output.md",
-    "design/test-outputs/UserIdentityConcept-test-output.md",
-    "design/concepts/notes/DueStack-design-notes.md",
-    "design/concepts/DueStack-specs/DeadlineManagementConcept.md",
-    "design/concepts/DueStack-specs/CourseManagementConcept.md",
-    "design/concepts/DueStack-specs/SuggestionManagementConcept.md",
-    "design/concepts/DueStack-brainstorming/DueStack-new-concepts.md",
-    "design/concepts/DueStack-specs/UserAuthenticationConcept.md",
-    "design/concepts/DueStack-specs/UserIdentityConcept.md",
-    "context/design/DueStack-overall-design.md/steps",
-    "context/design/SuggestionManagementConcept-design.md/steps",
-    "context/design/DocumentManagementConcept-design.md/steps",
-    "context/design/DeadlineManagementConcept-design.md/steps",
-    "context/design/CourseManagementConcept-design.md/steps",
-    "context/design/UserAuthenticationConcept-design.md/steps",
-    "context/design/UserIdentityConcept-design.md/steps",
-    "context/design/concepts/DueStack-specs/SuggestionManagementConcept.md/steps",
-    "context/design/concepts/DueStack-specs/DocumentManagementConcept.md/steps",
+    "src/concepts/SuggestionManagement/SuggestionManagementConcept.ts",
+    "src/concepts/SuggestionManagement/SuggestionManagementConcept.test.ts",
+    "src/concepts/SuggestionManagement",
+    "src/concepts/DocumentManagement/DocumentManagementConcept.ts",
+    "src/concepts/DocumentManagement/DocumentManagementConcept.test.ts",
+    "src/concepts/DocumentManagement",
+    "src/concepts/DeadlineManagement/DeadlineManagementConcept.ts",
+    "src/concepts/DeadlineManagement/DeadlineManagementConcept.test.ts",
+    "src/concepts/DeadlineManagement",
+    "src/concepts/CourseManagement/CourseManagementConcept.ts",
+    "src/concepts/CourseManagement/CourseManagementConcept.test.ts",
+    "design/tools/api-extraction-from-spec.md",
+    "design/tools/api-unified.md",
+    "context/design/learning/implement-duestack-concepts/implement-management-concepts-document-fix.md/steps/_.5db8a669.md",
+    "design/tools/api-extraction-from-code.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/20251021_105536.b8a66f77.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/API Specification.97fa8564.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/API Specification.af9f4b99.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/API Specification.79aa6406.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/API Specification.97d80b83.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/API Specification.435a3f5a.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/API Specification.9a596392.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/20251021_105440.5e75628d.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/20251021_105138.ac182497.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/20251021_105050.0e14d662.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/20251021_104920.d5e5aa86.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/response.6d76b65d.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/prompt.efe0c8e1.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/prompt.2e341510.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/file.ff8544c8.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/file.e23ba73e.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/file.dcdd0951.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/file.da975562.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/file.c5bcd3f5.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/file.7cb2abcd.md",
+    "context/Users/ejian/mitClasses/61040/Duestack_backend/design/tools/api-extraction-from-code.md/steps/file.79140582.md",
+    "media/relative_linking.png",
     "media/obsidian_settings.png",
     "media/linking.png"
   ]

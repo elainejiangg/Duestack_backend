@@ -1,0 +1,182 @@
+---
+timestamp: 'Sun Oct 19 2025 20:49:17 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251019_204917.98680fcd.md]]'
+content_id: e23ba73ef5fecb36fd5b8f125c0a8c5c61e9c817dea44885b11987053851ed29
+---
+
+# file: /Users/ejian/mitClasses/61040/Duestack\_backend/src/concepts/DueStack/CourseManagementConcept.ts
+
+```typescript
+import { Collection, Db } from "npm:mongodb";
+import { Empty, ID } from "@utils/types.ts";
+import { freshID } from "@utils/database.ts";
+
+// Collection prefix to ensure namespace separation
+const PREFIX = "CourseManagement" + ".";
+
+// Generic type for a User, originating from UserIdentity concept
+type User = ID;
+
+// Internal entity type for a Course
+type Course = ID;
+
+/**
+ * State: A set of Courses, each linked to a creator, with a unique courseCode, title, and optional Canvas ID.
+ */
+interface CourseDoc {
+  _id: Course; // Primary key for this collection
+  creator: User; // Reference to the UserIdentity's User ID
+  courseCode: string; // Unique per creator
+  title: string;
+  canvasId?: string; // Optional: external Canvas ID, unique globally if set
+}
+
+/**
+ * @concept CourseManagement
+ * @purpose organize and categorize academic deadlines by associating them with specific courses.
+ */
+export default class CourseManagementConcept {
+  courses: Collection<CourseDoc>;
+
+  constructor(private readonly db: Db) {
+    this.courses = this.db.collection(PREFIX + "courses");
+  }
+
+  /**
+   * Action: Creates a new course.
+   * @param {Object} args - The arguments for the action.
+   * @param {User} args.creator - The ID of the User who is creating the course.
+   * @param {string} args.courseCode - A unique code for the course (unique per creator).
+   * @param {string} args.title - The title of the course.
+   * @returns {Promise<{course: Course} | {error: string}>} A promise that resolves to an object containing the new course's ID on success, or an error message on failure.
+   * @requires courseCode is unique for the creator.
+   * @effects Creates a new course with the given details, linked to the creator.
+   */
+  async createCourse({ creator, courseCode, title }: { creator: User; courseCode: string; title: string }): Promise<{ course: Course } | { error: string }> {
+    const existingCourse = await this.courses.findOne({ creator, courseCode });
+    if (existingCourse) {
+      return { error: `Course with code '${courseCode}' already exists for this creator.` };
+    }
+
+    const courseId = freshID() as Course;
+    await this.courses.insertOne({
+      _id: courseId,
+      creator,
+      courseCode,
+      title,
+    });
+    return { course: courseId };
+  }
+
+  /**
+   * Action: Updates the courseCode and/or title of an existing course.
+   * @param {Object} args - The arguments for the action.
+   * @param {Course} args.course - The ID of the course to update.
+   * @param {string} args.newCourseCode - The new unique course code.
+   * @param {string} args.newTitle - The new title of the course.
+   * @returns {Promise<Empty | {error: string}>} A promise that resolves to an empty object on success, or an error message on failure.
+   * @requires course exists and newCourseCode is unique for the creator (if changed).
+   * @effects Updates the courseCode and title of an existing course.
+   */
+  async updateCourse({ course, newCourseCode, newTitle }: { course: Course; newCourseCode: string; newTitle: string }): Promise<Empty | { error: string }> {
+    const existingCourse = await this.courses.findOne({ _id: course });
+    if (!existingCourse) {
+      return { error: `Course with ID ${course} not found.` };
+    }
+
+    // Check uniqueness if courseCode is changed
+    if (existingCourse.courseCode !== newCourseCode) {
+      const duplicateCourse = await this.courses.findOne({
+        creator: existingCourse.creator,
+        courseCode: newCourseCode,
+      });
+      if (duplicateCourse) {
+        return { error: `New course code '${newCourseCode}' already exists for this creator.` };
+      }
+    }
+
+    await this.courses.updateOne(
+      { _id: course },
+      { $set: { courseCode: newCourseCode, title: newTitle } },
+    );
+    return {};
+  }
+
+  /**
+   * Action: Sets or updates the external Canvas ID for the specified course.
+   * @param {Object} args - The arguments for the action.
+   * @param {Course} args.course - The ID of the course to update.
+   * @param {string} args.canvasId - The external Canvas ID.
+   * @returns {Promise<Empty | {error: string}>} A promise that resolves to an empty object on success, or an error message on failure.
+   * @requires course exists and canvasId is unique across all courses.
+   * @effects Sets or updates the external Canvas ID for the specified course.
+   */
+  async setCanvasId({ course, canvasId }: { course: Course; canvasId: string }): Promise<Empty | { error: string }> {
+    const existingCourse = await this.courses.findOne({ _id: course });
+    if (!existingCourse) {
+      return { error: `Course with ID ${course} not found.` };
+    }
+
+    // Check if another course already uses this canvasId (must be unique globally)
+    const duplicateCanvasIdCourse = await this.courses.findOne({ canvasId });
+    if (duplicateCanvasIdCourse && duplicateCanvasIdCourse._id !== course) {
+      return { error: `Canvas ID '${canvasId}' is already linked to another course.` };
+    }
+
+    await this.courses.updateOne(
+      { _id: course },
+      { $set: { canvasId } },
+    );
+    return {};
+  }
+
+  /**
+   * Action: Removes the specified course.
+   * @param {Object} args - The arguments for the action.
+   * @param {Course} args.course - The ID of the course to delete.
+   * @returns {Promise<Empty | {error: string}>} A promise that resolves to an empty object on success, or an error message on failure.
+   * @requires course exists.
+   * @effects Removes the specified course.
+   * @note The concept specification states "and has no associated deadlines". This check must be enforced by external synchronizations or services before calling this action, as DeadlineManagement is an independent concept. This concept only ensures the 'course exists' precondition.
+   */
+  async deleteCourse({ course }: { course: Course }): Promise<Empty | { error: string }> {
+    const result = await this.courses.deleteOne({ _id: course });
+
+    if (result.deletedCount === 0) {
+      return { error: `Course with ID ${course} not found.` };
+    }
+    return {};
+  }
+
+  // --- Query Methods (for internal use and testing) ---
+
+  /**
+   * Query: Retrieves a course by its ID.
+   */
+  async _getCourseById({ courseId }: { courseId: Course }): Promise<CourseDoc | null> {
+    return await this.courses.findOne({ _id: courseId });
+  }
+
+  /**
+   * Query: Retrieves courses created by a specific user.
+   */
+  async _getCoursesByCreator({ creator }: { creator: User }): Promise<CourseDoc[]> {
+    return await this.courses.find({ creator }).toArray();
+  }
+
+  /**
+   * Query: Retrieves a course by its courseCode and creator.
+   */
+  async _getCourseByCodeAndCreator({ creator, courseCode }: { creator: User; courseCode: string }): Promise<CourseDoc | null> {
+    return await this.courses.findOne({ creator, courseCode });
+  }
+
+  /**
+   * Query: Retrieves all courses.
+   */
+  async _getAllCourses(): Promise<CourseDoc[]> {
+    return await this.courses.find({}).toArray();
+  }
+}
+
+```

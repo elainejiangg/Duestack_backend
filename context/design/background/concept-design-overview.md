@@ -1,18 +1,11 @@
----
-timestamp: 'Tue Oct 07 2025 21:27:04 GMT-0400 (Eastern Daylight Time)'
-parent: '[[../20251007_212704.5a915cad.md]]'
-content_id: 3eb68380892e496536beb238e08f9d95f4074811146ec81a42cf350bf0f286b5
----
-
 # Why Concept Design?
 
-Concept design is a new approach to software development that attempts to find greater modularity in the structuring of the functionality of applications. The key idea is to break the functionality down into separable, modular services called *concepts*, each of which can be specified, implemented and understood separately -- by users and by developers.
+Concept design is a new approach to software development that attempts to find greater modularity in the structuring of the functionality of applications. The key idea is to break the functionality down into separable, modular services called *concepts*, each of which can be specified, implemented and understood separately -- by users and by developers. 
 
 The advantages of concept design include:
-
-* Improved separation of concerns resulting in simpler and more robust design and implementation;
-* Greater recognition of reusable behaviors, so reduced work for designers and developers and more familiar interactions for users;
-* Improved focus on the purposes and motivations of the functionality, since each concept is closely targeted at delivering a particular function of value in the context of the larger app.
+- Improved separation of concerns resulting in simpler and more robust design and implementation;
+- Greater recognition of reusable behaviors, so reduced work for designers and developers and more familiar interactions for users;
+- Improved focus on the purposes and motivations of the functionality, since each concept is closely targeted at delivering a particular function of value in the context of the larger app.
 
 ## What is a concept?
 
@@ -44,9 +37,10 @@ Concept independence lets design scale, because individual concepts can be worke
 
 Polymorphism is key to independence: the designer of a concept should strive to make the concept as free as possible of any assumptions about the content and interpretation of objects passed as action arguments. Even if a *Comment* concept is used within an app only for comments on posts, it should be described as applying comments to arbitrary targets, defined only by their identity.
 
+
 ## Separation of concerns
 
-One of the key advances of concept design is a more effective *separation of concerns* than is typical in software designs. This means that each concept addresses only a single, coherent aspect of the functionality of the application, and does not conflate aspects of functionality that could easily be separated.
+One of the key advances of concept design is a more effective *separation of concerns* than is typical in software designs. This means that each concept addresses only a single, coherent aspect of the functionality of the application, and does not conflate aspects of functionality that could easily be separated. 
 
 In a traditional design, in contrast, concerns are often conflated, especially around objects (or classes). For example, it is common for a *User* class to handle all kinds of functions associated with users: authentication, profiles, naming, choice of communication channels for notification, and more. In a concept design, these would be separated into different concepts: one for authentication, one for profiles, one for naming, one for notification, and so on. The state declaration form makes it easy to associate the appropriate properties or fields with user objects in each concept. For example, the *UserAuthentication* concept may have a state that maps user identifiers to usernames and passwords; the *Profile* concept may map user identifiers to bios and thumbnail images; the *Notification* concept may map user identifiers to phone numbers and email addresses to be used as notification channels.
 
@@ -68,15 +62,15 @@ then
 	Comment.delete (c)
 ```
 
+
 Not that the syncs is not only causing an action to happen but also providing input arguments to actions (in this case the comment to be deleted).
 
-A sync can have multiple actions in its when and then clauses, and can refer to the state of multiple concepts in the where clause.
+A sync can have multiple actions in its when and then clauses, and can refer to the state of multiple concepts in the where clause. 
 
 Some other examples of how syncs are used:
-
-* When a user comments on another user's post, the second user is notified
-* When a user exhibits some good behavior, karma is awarded to them
-* When a user checks out a shopping cart, their credit card is charged.
+- When a user comments on another user's post, the second user is notified
+- When a user exhibits some good behavior, karma is awarded to them
+- When a user checks out a shopping cart, their credit card is charged.
 
 Syncs can be used for authentication and authorization. In these case, it is common to represent requests made by a user as actions of a kind of pseudo concept (which is usually called *Request*). For example, a sync might say that if a user requests to delete a post, and the user is the author of the post, then the deletion can go ahead:
 
