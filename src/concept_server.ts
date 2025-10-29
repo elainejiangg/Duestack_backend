@@ -25,18 +25,25 @@ async function main() {
   const [db] = await getDb();
   const app = new Hono();
 
+  // Add CORS middleware to allow frontend requests
+  app.use(
+    "/*",
+    cors({
+      origin: ["http://localhost:3000", "http://localhost:5173"],
+      credentials: true,
+    })
+  );
+
   app.get("/", (c) => c.text("Concept Server is running."));
 
   // --- Dynamic Concept Loading and Routing ---
   console.log(`Scanning for concepts in ./${CONCEPTS_DIR}...`);
 
-  for await (
-    const entry of walk(CONCEPTS_DIR, {
-      maxDepth: 1,
-      includeDirs: true,
-      includeFiles: false,
-    })
-  ) {
+  for await (const entry of walk(CONCEPTS_DIR, {
+    maxDepth: 1,
+    includeDirs: true,
+    includeFiles: false,
+  })) {
     if (entry.path === CONCEPTS_DIR) continue; // Skip the root directory
 
     const conceptName = entry.name;
@@ -52,7 +59,7 @@ async function main() {
         !ConceptClass.name.endsWith("Concept")
       ) {
         console.warn(
-          `! No valid concept class found in ${conceptFilePath}. Skipping.`,
+          `! No valid concept class found in ${conceptFilePath}. Skipping.`
         );
         continue;
       }
@@ -60,26 +67,19 @@ async function main() {
       const instance = new ConceptClass(db);
       const conceptApiName = conceptName;
       console.log(
-        `- Registering concept: ${conceptName} at ${BASE_URL}/${conceptApiName}`,
+        `- Registering concept: ${conceptName} at ${BASE_URL}/${conceptApiName}`
       );
 
       const methodNames = Object.getOwnPropertyNames(
-        Object.getPrototypeOf(instance),
-      )
-        .filter((name) =>
-          name !== "constructor" && typeof instance[name] === "function"
-        );
+        Object.getPrototypeOf(instance)
+      ).filter(
+        (name) => name !== "constructor" && typeof instance[name] === "function"
+      );
 
       for (const methodName of methodNames) {
         const actionName = methodName;
         const route = `${BASE_URL}/${conceptApiName}/${actionName}`;
 
-
-  // Add CORS middleware to allow frontend requests
-  app.use("/*", cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-  }));
         app.post(route, async (c) => {
           try {
             const body = await c.req.json().catch(() => ({})); // Handle empty body
@@ -93,10 +93,7 @@ async function main() {
         console.log(`  - Endpoint: POST ${route}`);
       }
     } catch (e) {
-      console.error(
-        `! Error loading concept from ${conceptFilePath}:`,
-        e,
-      );
+      console.error(`! Error loading concept from ${conceptFilePath}:`, e);
     }
   }
 

@@ -47,6 +47,7 @@ interface DeadlineDoc {
   source: Source;
   addedBy: User; // Reference to the UserIdentity's User ID
   status?: Status; // Optional completion status
+  websiteUrl?: string; // Optional: Source document URLs (for AI-parsed deadlines)
 }
 
 /**
@@ -73,15 +74,21 @@ export default class DeadlineManagementConcept {
    * @requires title is non-empty.
    * @effects Creates a new deadline with the given details, initially with no status.
    */
-  async createDeadline(
-    { course, title, due, source, addedBy }: {
-      course: Course;
-      title: string;
-      due: Date;
-      source: Source;
-      addedBy: User;
-    },
-  ): Promise<{ deadline: Deadline } | { error: string }> {
+  async createDeadline({
+    course,
+    title,
+    due,
+    source,
+    addedBy,
+    websiteUrl,
+  }: {
+    course: Course;
+    title: string;
+    due: Date;
+    source: Source;
+    addedBy: User;
+    websiteUrl?: string;
+  }): Promise<{ deadline: Deadline } | { error: string }> {
     // Basic validation
     if (!title || title.trim() === "") {
       return { error: "Deadline title cannot be empty." };
@@ -100,6 +107,7 @@ export default class DeadlineManagementConcept {
       due,
       source,
       addedBy,
+      websiteUrl,
       // status is optional, so it's not set initially unless provided explicitly
     });
     return { deadline: deadlineId };
@@ -117,14 +125,17 @@ export default class DeadlineManagementConcept {
    * @requires newTitle is non-empty.
    * @effects Updates the title, due date, and source of an existing deadline.
    */
-  async updateDeadline(
-    { deadline, newTitle, newDue, newSource }: {
-      deadline: Deadline;
-      newTitle: string;
-      newDue: Date;
-      newSource: Source;
-    },
-  ): Promise<Empty | { error: string }> {
+  async updateDeadline({
+    deadline,
+    newTitle,
+    newDue,
+    newSource,
+  }: {
+    deadline: Deadline;
+    newTitle: string;
+    newDue: Date;
+    newSource: Source;
+  }): Promise<Empty | { error: string }> {
     const existingDeadline = await this.deadlines.findOne({ _id: deadline });
     if (!existingDeadline) {
       return { error: `Deadline with ID ${deadline} not found.` };
@@ -138,7 +149,7 @@ export default class DeadlineManagementConcept {
 
     await this.deadlines.updateOne(
       { _id: deadline },
-      { $set: { title: newTitle, due: newDue, source: newSource } },
+      { $set: { title: newTitle, due: newDue, source: newSource } }
     );
     return {};
   }
@@ -152,9 +163,13 @@ export default class DeadlineManagementConcept {
    * @requires deadline exists.
    * @effects Updates the completion status of a deadline.
    */
-  async setStatus(
-    { deadline, status }: { deadline: Deadline; status: Status },
-  ): Promise<Empty | { error: string }> {
+  async setStatus({
+    deadline,
+    status,
+  }: {
+    deadline: Deadline;
+    status: Status;
+  }): Promise<Empty | { error: string }> {
     const existingDeadline = await this.deadlines.findOne({ _id: deadline });
     if (!existingDeadline) {
       return { error: `Deadline with ID ${deadline} not found.` };
@@ -163,10 +178,7 @@ export default class DeadlineManagementConcept {
       return { error: `Invalid status: ${status}.` };
     }
 
-    await this.deadlines.updateOne(
-      { _id: deadline },
-      { $set: { status } },
-    );
+    await this.deadlines.updateOne({ _id: deadline }, { $set: { status } });
     return {};
   }
 
@@ -178,7 +190,11 @@ export default class DeadlineManagementConcept {
    * @requires deadline exists.
    * @effects Removes the specified deadline.
    */
-  async deleteDeadline({ deadline }: { deadline: Deadline }): Promise<Empty | { error: string }> {
+  async deleteDeadline({
+    deadline,
+  }: {
+    deadline: Deadline;
+  }): Promise<Empty | { error: string }> {
     const result = await this.deadlines.deleteOne({ _id: deadline });
 
     if (result.deletedCount === 0) {
@@ -192,21 +208,33 @@ export default class DeadlineManagementConcept {
   /**
    * Query: Retrieves a deadline by its ID.
    */
-  async _getDeadlineById({ deadlineId }: { deadlineId: Deadline }): Promise<DeadlineDoc | null> {
+  async _getDeadlineById({
+    deadlineId,
+  }: {
+    deadlineId: Deadline;
+  }): Promise<DeadlineDoc | null> {
     return await this.deadlines.findOne({ _id: deadlineId });
   }
 
   /**
    * Query: Retrieves all deadlines associated with a specific course.
    */
-  async _getDeadlinesByCourse({ courseId }: { courseId: Course }): Promise<DeadlineDoc[]> {
+  async _getDeadlinesByCourse({
+    courseId,
+  }: {
+    courseId: Course;
+  }): Promise<DeadlineDoc[]> {
     return await this.deadlines.find({ course: courseId }).toArray();
   }
 
   /**
    * Query: Retrieves all deadlines added by a specific user.
    */
-  async _getDeadlinesByAddedBy({ userId }: { userId: User }): Promise<DeadlineDoc[]> {
+  async _getDeadlinesByAddedBy({
+    userId,
+  }: {
+    userId: User;
+  }): Promise<DeadlineDoc[]> {
     return await this.deadlines.find({ addedBy: userId }).toArray();
   }
 
