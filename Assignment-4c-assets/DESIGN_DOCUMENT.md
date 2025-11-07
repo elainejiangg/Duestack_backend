@@ -14,9 +14,9 @@ This document summarizes how the final DueStack implementation differs from the 
 
 ### 1. Authentication & Authorization Architecture
 
-**Initial Design (Assignment 2):** Basic concept-level authentication without explicit request interception.
+**Initial Design (Assignment 4a/b):** Basic concept-level authentication without explicit request interception.
 
-**Final Implementation:**
+**Final Implementation (4c):**
 
 - **Sync-based Authentication**: Implemented comprehensive authentication syncs using the Requesting concept pattern
 - **Excluded Routes**: All sensitive operations (course/deadline CRUD) are excluded from passthrough routes and require authentication through syncs
@@ -33,7 +33,7 @@ This document summarizes how the final DueStack implementation differs from the 
 
 ### 2. Canvas Integration - Removed
 
-**Initial Design (Assignment 2/4b):** Planned Canvas LMS integration for automatic deadline extraction.
+**Initial Design (Assignment 4a/4b):** Planned Canvas LMS integration for automatic deadline extraction.
 
 **Final Implementation:** **Completely removed** from the UI and backend syncs.
 
@@ -120,15 +120,6 @@ const courses = await courseService.getCoursesByCreator();
 Requesting.respond({ request, results: courseDocs });
 ```
 
----
-
-### 6. LikertSurvey Removal
-
-**Final Implementation:** Removed all LikertSurvey passthrough routes that were provided as examples in the starter code.
-
-**Before:** 5 LikertSurvey routes cluttered the passthrough configuration.
-
-**After:** Clean configuration with only essential public routes.
 
 ---
 
