@@ -61,14 +61,27 @@ export default class UserAuthenticationConcept {
    * @requires username is unique and password meets complexity requirements.
    * @effects Creates a new AuthenticatedUser, associating the provided User ID with a username and hashed password.
    */
-  async register({ user, username, password }: { user: User; username: string; password: string }): Promise<Empty | { error: string }> {
-    const existingUsername = await this.authenticatedUsers.findOne({ username });
+  async register({
+    user,
+    username,
+    password,
+  }: {
+    user: User;
+    username: string;
+    password: string;
+  }): Promise<Empty | { error: string }> {
+    const existingUsername = await this.authenticatedUsers.findOne({
+      username,
+    });
     if (existingUsername) {
       return { error: `Username '${username}' is already taken.` };
     }
 
     if (!checkPasswordComplexity(password)) {
-      return { error: "Password does not meet complexity requirements (min 8 characters)." };
+      return {
+        error:
+          "Password does not meet complexity requirements (min 8 characters).",
+      };
     }
 
     const passwordHash = hashPassword(password);
@@ -92,7 +105,13 @@ export default class UserAuthenticationConcept {
    * @requires username and password match an existing AuthenticatedUser.
    * @effects Generates a new sessionID for the AuthenticatedUser.
    */
-  async login({ username, password }: { username: string; password: string }): Promise<{ sessionID: string; user: User } | { error: string }> {
+  async login({
+    username,
+    password,
+  }: {
+    username: string;
+    password: string;
+  }): Promise<{ sessionID: string; user: User } | { error: string }> {
     const authUser = await this.authenticatedUsers.findOne({ username });
 
     if (!authUser || authUser.passwordHash !== hashPassword(password)) {
@@ -102,7 +121,7 @@ export default class UserAuthenticationConcept {
     const sessionID = freshID(); // Generate a new session ID
     await this.authenticatedUsers.updateOne(
       { _id: authUser._id },
-      { $set: { sessionID } },
+      { $set: { sessionID } }
     );
     return { sessionID, user: authUser.user };
   }
@@ -115,10 +134,14 @@ export default class UserAuthenticationConcept {
    * @requires sessionID is valid.
    * @effects Clears the sessionID for the associated AuthenticatedUser.
    */
-  async logout({ sessionID }: { sessionID: string }): Promise<Empty | { error: string }> {
+  async logout({
+    sessionID,
+  }: {
+    sessionID: string;
+  }): Promise<Empty | { error: string }> {
     const result = await this.authenticatedUsers.updateOne(
       { sessionID },
-      { $unset: { sessionID: "" } }, // Unset the sessionID field
+      { $unset: { sessionID: "" } } // Unset the sessionID field
     );
 
     if (result.matchedCount === 0) {
@@ -137,7 +160,15 @@ export default class UserAuthenticationConcept {
    * @requires user exists, oldPassword matches, newPassword meets complexity requirements.
    * @effects Updates the passwordHash for the specified User.
    */
-  async changePassword({ user, oldPassword, newPassword }: { user: User; oldPassword: string; newPassword: string }): Promise<Empty | { error: string }> {
+  async changePassword({
+    user,
+    oldPassword,
+    newPassword,
+  }: {
+    user: User;
+    oldPassword: string;
+    newPassword: string;
+  }): Promise<Empty | { error: string }> {
     const authUser = await this.authenticatedUsers.findOne({ user });
 
     if (!authUser) {
@@ -149,13 +180,16 @@ export default class UserAuthenticationConcept {
     }
 
     if (!checkPasswordComplexity(newPassword)) {
-      return { error: "New password does not meet complexity requirements (min 8 characters)." };
+      return {
+        error:
+          "New password does not meet complexity requirements (min 8 characters).",
+      };
     }
 
     const newPasswordHash = hashPassword(newPassword);
     await this.authenticatedUsers.updateOne(
       { _id: authUser._id },
-      { $set: { passwordHash: newPasswordHash } },
+      { $set: { passwordHash: newPasswordHash } }
     );
     return {};
   }
@@ -169,7 +203,13 @@ export default class UserAuthenticationConcept {
    * @requires user exists and canvasOAuthToken is valid (validity check is external to this concept).
    * @effects Stores the Canvas OAuth token for the user, enabling Canvas data fetching.
    */
-  async connectCanvas({ user, canvasOAuthToken }: { user: User; canvasOAuthToken: string }): Promise<Empty | { error: string }> {
+  async connectCanvas({
+    user,
+    canvasOAuthToken,
+  }: {
+    user: User;
+    canvasOAuthToken: string;
+  }): Promise<Empty | { error: string }> {
     const authUser = await this.authenticatedUsers.findOne({ user });
 
     if (!authUser) {
@@ -178,7 +218,7 @@ export default class UserAuthenticationConcept {
 
     await this.authenticatedUsers.updateOne(
       { _id: authUser._id },
-      { $set: { canvasOAuthToken } },
+      { $set: { canvasOAuthToken } }
     );
     return {};
   }
@@ -188,22 +228,37 @@ export default class UserAuthenticationConcept {
   /**
    * Query: Retrieves an AuthenticatedUserDoc by username.
    */
-  async _getAuthenticatedUserByUsername({ username }: { username: string }): Promise<AuthenticatedUserDoc | null> {
+  async _getAuthenticatedUserByUsername({
+    username,
+  }: {
+    username: string;
+  }): Promise<AuthenticatedUserDoc | null> {
     return await this.authenticatedUsers.findOne({ username });
   }
 
   /**
    * Query: Retrieves an AuthenticatedUserDoc by the User ID.
    */
-  async _getAuthenticatedUserByUser({ user }: { user: User }): Promise<AuthenticatedUserDoc | null> {
+  async _getAuthenticatedUserByUser({
+    user,
+  }: {
+    user: User;
+  }): Promise<AuthenticatedUserDoc | null> {
     return await this.authenticatedUsers.findOne({ user });
   }
 
   /**
    * Query: Retrieves the User ID associated with a given session ID.
    */
-  async _getSessionUser({ sessionID }: { sessionID: string }): Promise<User | null> {
+  async _getSessionUser({
+    sessionID,
+  }: {
+    sessionID: string;
+  }): Promise<{ user: User }[]> {
     const authUser = await this.authenticatedUsers.findOne({ sessionID });
-    return authUser ? authUser.user : null;
+    if (!authUser) {
+      return [];
+    }
+    return [{ user: authUser.user }];
   }
 }
