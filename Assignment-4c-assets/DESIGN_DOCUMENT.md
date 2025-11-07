@@ -1,206 +1,188 @@
 # Assignment 4c: Design Document
 
-## DueStack - Final Implementation Design
+## DueStack - From Concept to Reality
+
+**How DueStack evolved from initial concept design (Assignment 2) through implementation (4a), visual design (4b), and final deployment (4c).**
 
 ---
 
-## Overview
+## Table of Contents
 
-This document summarizes how the final DueStack implementation differs from the initial concept design (Assignment 2) and visual design (Assignment 4b), highlighting key architectural decisions, feature changes, and implementation details.
-
----
-
-## Major Design Changes
-
-### 1. Authentication & Authorization Architecture
-
-**Initial Design (Assignment 4a/b):** Basic concept-level authentication without explicit request interception.
-
-**Final Implementation (4c):**
-
-- **Sync-based Authentication**: Implemented comprehensive authentication syncs using the Requesting concept pattern
-- **Excluded Routes**: All sensitive operations (course/deadline CRUD) are excluded from passthrough routes and require authentication through syncs
-- **Included Routes**: Only three public routes remain as passthrough:
-  - `/api/UserAuthentication/register`
-  - `/api/UserAuthentication/login`
-  - `/api/UserIdentity/createUser`
-- **Session Management**: Automatic session validation in sync `where` clauses before executing concept actions
-- **Error Handling**: Dedicated auth error syncs (`AuthError` patterns) for clean error propagation
-
-**Rationale:** This provides a clean separation between public and authenticated operations while maintaining security at the request level rather than relying solely on concept-level checks.
+1. [Assignment 2 → 4a: Building the Foundation](#assignment-2--4a-building-the-foundation)
+2. [Assignment 4b: Visual Design](#assignment-4b-visual-design)
+3. [Assignment 4c: Securing and Deploying](#assignment-4c-securing-and-deploying)
+4. [Key Takeaways](#key-takeaways)
 
 ---
 
-### 2. Canvas Integration - Removed
+## Assignment 2 → 4a: Building the Foundation
 
-**Initial Design (Assignment 4a/4b):** Planned Canvas LMS integration for automatic deadline extraction.
+### The Evolution
 
-**Final Implementation:** **Completely removed** from the UI and backend syncs.
+Started with **5 rough concepts** in Assignment 2. After feedback highlighting critical gaps (missing authentication, inaccessible state, broken modularity), refined into **6 well-scoped concepts** for Assignment 4a:
 
-**Reasons:**
+1. **UserIdentity** - User profiles
+2. **UserAuthentication** - Login, sessions, passwords
+3. **CourseManagement** - Course CRUD
+4. **DeadlineManagement** - Deadline CRUD + status tracking
+5. **DocumentManagement** - File storage with pre-signed URLs
+6. **SuggestionManagement** - AI extraction and suggestions
 
-- Canvas API complexity exceeded project scope
-- OAuth authentication flow too time-intensive for assignment timeline
-- Adequate alternatives (AI website/PDF extraction) provide similar value
+### Addressing Assignment 2 Feedback (-13 points)
 
-**Impact:**
+**Problem 1: Missing Authentication**
 
-- Cleaner codebase without unused Canvas-related code
-- Removed from all frontend views (`DeadlinesView`, `AllDeadlinesView`, `CreateDeadlineForm`, `EditDeadlineModal`)
-- Removed API endpoints: `connectCanvas`, `disconnectCanvas`, `setCanvasId`, `parseFromCanvas`
-- UI now shows only three deadline sources: Manual, AI Document, AI Website
+- **A2**: Single "User" concept without passwords
+- **A4a**: Split into `UserIdentity` (profiles) + `UserAuthentication` (security)
+
+**Problem 2: Inaccessible State 
+
+- **A2**: `canvasId` in Courses had no setter
+- **A4a**: Added `updateCourse()` and `setCanvasId()` actions
+- **A4c**: Later removed entirely when Canvas integration was cut
+
+**Problem 3: Missing CRUD Operations
+
+- **A2**: Only Create and Read actions
+- **A4a**: Systematically added Update and Delete to all concepts
+
+**Problem 4: Broken Modularity 
+
+- **A2**: `ParsedDeadlineSuggestions` directly accessed `DocumentManagement` state
+- **A4a**: Frontend orchestrates—concepts never see each other's state
+
+### Key Implementation Decisions
+
+**MongoDB Strategy**: Concept-specific collections with prefixes (`users`, `courses`, `deadlines`, etc.)
+
+**Test Isolation**: `testDb()` function drops all collections before each test—ensures clean slate
+
+**File Storage Refactor**: Initially planned to store PDFs in MongoDB. After Piazza research, pivoted to **pre-signed URLs** with cloud storage (scalable, follows best practices)
+
+**Type Safety**: TypeScript throughout caught numerous bugs early
+
+### Notable Development Challenges
+
+1. **Import Path Issues**: IDE differences (Cursor vs Obsidian) caused incorrect auto-imports
+2. **MongoDB Empty Batch**: Added defensive checks before `insertMany()` operations
+3. **Mock LLM Patterns**: Replaced strict matching with flexible patterns for realistic testing
+4. **Concept Naming**: Settled on singular names (`UserIdentity`) with plural collections (`users`)
+5. **Spec-Code Sync**: Developed habit of updating both simultaneously to prevent drift
 
 ---
 
-### 3. AI-Powered Deadline Extraction
+## Assignment 4b: Visual Design
 
-**Initial Design:** Basic deadline parsing with manual entry focus.
+### Design Principles
 
-**Final Implementation:**
+- **Minimalist Interface**: Card-based layout with ample whitespace
+- **Color-Coded Status**: Blue (TODO), Yellow (IN_PROGRESS), Green (COMPLETED), Red (OVERDUE)
+- **Source Provenance**: Show where each deadline came from (Manual, AI Document, AI Website, ~~Canvas~~)
 
-- **Website Extraction**: Gemini-powered extraction from course websites
-- **PDF Document Extraction**: Multi-document PDF processing with structured extraction
-- **Suggestion Management**: Unconfirmed suggestions workflow with editing and refinement capabilities
-- **Confidence Scoring**: AI provides confidence levels and provenance tracking
+### Key UI Patterns
 
-**Key Features:**
+**Multi-Step AI Extraction**: Select source → Configure → Review suggestions → Edit → Confirm
 
-- Extraction configuration management with customizable prompts
-- Suggestion refinement with user feedback
-- Individual suggestion editing before confirmation
-- Batch confirmation of AI-extracted deadlines
+**Deadline Cards**: Title, due date, course, status badge, source indicator, quick actions (edit, delete, set status)
+
+**Calendar View**: Month/week visualization with color-coded deadlines
 
 ---
 
-### 4. Data Integrity - Cascade Deletion
+## Assignment 4c: Securing and Deploying
 
-**Initial Design:** Simple deletion operations without dependency management.
+### 1. Sync-Based Authentication
 
-**Final Implementation:**
+**Problem**: Frontend directly calling concepts—not secure, auth logic scattered
+
+**Solution**: Backend syncs intercept requests, validate sessions, then execute concept actions
 
 ```typescript
-// Implemented in DeleteCourseRequest sync
-export const DeleteCourseRequest: Sync = ({ course, ... }) => ({
+export const CreateCourseRequest: Sync = ({ sessionID, user, ... }) => ({
+  when: actions([Requesting.request, { path: "/CourseManagement/createCourse", ... }]),
   where: async (frames) => {
-    // Delete all associated deadlines first
-    const deadlineDocs = await DeadlineManagement._getDeadlinesByCourse({
-      courseId: originalFrame[course],
-    });
-    for (const deadlineDoc of deadlineDocs) {
-      await DeadlineManagement.deleteDeadline({ deadline: deadlineDoc._id });
-    }
+    // Validate session, extract user
+    frames = await frames.query(UserAuthentication._getSessionUser, { sessionID }, { user });
+    if (!frames[0][user]) return new Frames({ [authError]: "Invalid session" });
     return frames;
   },
-  then: actions([CourseManagement.deleteCourse, { course }]),
+  then: actions([CourseManagement.createCourse, { creator: user, ... }]),
 });
 ```
 
-**Impact:** Ensures referential integrity - deleting a course automatically removes all its deadlines, preventing orphaned data.
+**Impact**: Only 3 public routes (`/register`, `/login`, `/createUser`). All others require authentication.
 
----
+**Frontend Simplification**: `apiRequest()` helper auto-injects `sessionID` via axios interceptor
 
-### 5. Frontend-Backend Communication Pattern
+### 2. Canvas Integration Removal
 
-**Initial Design:** Direct concept action calls from frontend.
+**Initial Plan**: OAuth with Canvas, sync courses, extract Canvas assignments
 
-**Final Implementation:**
+**Decision**: **Removed entirely**
 
-- **Unified API Helpers**: `apiRequest()` (authenticated) and `publicRequest()` (public)
-- **Automatic Session Management**: `sessionID` injected automatically in authenticated requests
-- **Response Interceptors**: Centralized error handling with automatic session expiry detection
-- **Results Array Pattern**: Backend syncs return `{ results: [...] }` for query operations
+**Reasons**:
 
-**Example:**
+- Canvas OAuth too complex (app registration, redirect URIs, token management)
+- Time constraints for Assignment 4c
+- AI website/PDF extraction provides similar value
 
-```javascript
-// Frontend - clean, no manual sessionID management
-const courses = await courseService.getCoursesByCreator();
+**Learning**: Prototype third-party APIs early—would have caught complexity during design phase
 
-// Backend sync returns
-Requesting.respond({ request, results: courseDocs });
+### 3. AI-Powered Features (The Differentiator)
+
+**Website Extraction**: Paste URL → Gemini extracts deadlines → Review/edit → Confirm
+
+**PDF Extraction**: Upload syllabi → Multi-document processing → Confidence scores → Batch confirm
+
+**Suggestion Refinement**: Natural language edits (e.g., "Make all homework due at 11:59 PM")
+
+**Individual Editing**: Manual tweaks before confirming
+
+**Design Philosophy**: AI + human oversight = best results (trust but verify)
+
+### 4. Cascade Deletion
+
+**Problem**: What happens to deadlines when a course is deleted?
+
+**Solution**: Implemented in `DeleteCourseRequest` sync—deletes all associated deadlines first
+
+```typescript
+where: async (frames) => {
+  // Fetch and delete all deadlines for this course
+  const deadlines = await DeadlineManagement._getDeadlinesByCourse({
+    courseId,
+  });
+  for (const deadline of deadlines) {
+    await DeadlineManagement.deleteDeadline({ deadline: deadline._id });
+  }
+  return frames;
+};
 ```
 
+**Rationale**: Syncs orchestrate multi-concept workflows while maintaining concept independence
+
+### 5. Frontend-Backend Communication
+
+**Unified Pattern**:
+
+- `apiRequest(concept, action, data)` for authenticated routes
+- `publicRequest(concept, action, data)` for login/register
+- Axios interceptors handle session injection and error handling
+
+**Benefits**: DRY principle, centralized error handling, automatic session expiry detection
 
 ---
 
-## Visual Design Refinements (from 4b)
+## Key Takeaways
 
-### UI Enhancements
+### What Stayed True
 
-- **Enhanced Error Messages**: Login/register errors now display with prominent red styling, border emphasis, and shake animation
-- **Modal State Management**: Fixed issue where edit modals would get stuck in loading state
-- **Source Selection Interface**: Clean card-based selection for deadline sources (removed disabled Canvas option)
-- **Deadline Display**: Improved deadline list with status badges, edit/delete actions
+✅ All 6 concepts from A4a shipped to production  
+✅ AI-first approach became the standout feature  
+✅ Concept independence maintained throughout
 
-### UX Improvements
+### What Changed
 
-- **Automatic Deadline Refresh**: Deadlines automatically refresh after creation/deletion
-- **Course Context**: Deadline views maintain course context for better navigation
-- **Calendar Integration**: Interactive calendar view for deadline visualization
-- **Filter Options**: Status-based filtering in All Deadlines view
-
----
-
-## Technical Architecture
-
-### Sync Patterns Implemented
-
-1. **CRUD Operations**: Create, Read, Update, Delete syncs for courses and deadlines
-2. **Authentication Guards**: `where` clauses check `_getSessionUser` before operations
-3. **Error Handling**: Separate success, error, and auth-error syncs for each operation
-4. **Query Operations**: Direct concept method calls returning document arrays
-
-### Concept Organization
-
-- **UserAuthentication**: Session management and password auth
-- **UserIdentity**: User profile management
-- **CourseManagement**: Course CRUD operations
-- **DeadlineManagement**: Deadline CRUD with status tracking
-- **SuggestionManagement**: AI extraction and suggestion workflow
-- **DocumentManagement**: PDF/document storage and retrieval
-- **Requesting**: HTTP server with passthrough/exclusion routing
-
----
-
-## Key Implementation Decisions
-
-### 1. Optional Parameters Handling
-
-**Challenge:** Optional parameters like `websiteUrl` and `optionalTimeout` caused sync binding errors.
-
-**Solution:** Removed optional parameters from sync `when` and `then` clauses entirely, letting concept methods handle defaults.
-
-### 2. Parameter Name Consistency
-
-**Challenge:** Mismatches between frontend (`creator`), sync (`user`), and concept (`creator`) parameter names.
-
-**Solution:** Standardized naming conventions and mapped parameters explicitly in syncs.
-
-### 3. Query vs. Action Pattern
-
-**Decision:** Used underscore-prefixed queries (`_getCoursesByCreator`) for read operations that don't modify state.
-
-**Benefit:** Clear semantic distinction between queries and actions in the codebase.
-
----
-
-## Deviations from Assignment 4b Mockups
-
-1. **Removed Canvas Source Option**: No longer appears in source selection UI
-2. **Simplified Header**: Username displayed without Canvas connection status
-3. **AI Extraction Flow**: Two-step process (select source → configure extraction) vs. single-step mockup
-4. **Deadline Cards**: Added status badges and source indicators not in original mockup
-
----
-
-## Conclusion
-
-The final implementation represents a pragmatic evolution from the initial design, prioritizing:
-
-- **Security**: Comprehensive sync-based authentication
-- **Usability**: AI-powered extraction reduces manual entry burden
-- **Data Integrity**: Cascade deletion prevents orphaned records
-- **Maintainability**: Clean separation of public vs. authenticated routes
-- **Scope Management**: Removed Canvas integration to focus on core value propositions
-
-The result is a production-ready deadline management system with intelligent AI assistance, robust authentication, and intuitive user experience.
+❌ Canvas removed (pragmatic scope decision)  
+✔️ Syncs added for security (A4c requirement)  
+✔️ File storage pivoted to URLs (scalability/feasibility within assignment timeline)

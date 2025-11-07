@@ -2,6 +2,17 @@
 
 ---
 
+## Table of Contents
+
+1. [What Was Hard](#what-was-hard)
+2. [What Went Well](#what-went-well)
+3. [Key Mistakes & Lessons Learned](#key-mistakes--lessons-learned)
+4. [Skills Acquired](#skills-acquired)
+5. [Use of Tools](#use-of-tools)
+6. [Overall Experience](#overall-experience)
+
+---
+
 ## What Was Hard
 
 ### Backend Sync Implementation
@@ -122,25 +133,6 @@ Context tool (design specs) → Cursor (implementation) → DevTools (verificati
 
 ### Would Do Differently
 
-1. Write tests from day one instead of manual testing
-2. Use TypeScript for compile-time error catching
-3. Prototype third-party APIs early (would have caught Canvas complexity)
-4. Better git hygiene with frequent, descriptive commits
+1. Prototype third-party APIs early (would have caught Canvas complexity)
+2. Better git hygiene with frequent, descriptive commits
 
----
-
-## Conclusion
-
-This project reinforced that **software development is iterative problem-solving**. The combination of concept-oriented architecture, AI-powered features, and comprehensive authentication made for a challenging but rewarding implementation.
-
-Three pillars proved essential:
-
-1. **Tool-Assisted Design & Implementation**: Context tool for structured design specs (4a/4b), Cursor for coding implementation (4c). Required human judgment for architecture and verification.
-
-2. **DevTools Mastery**: Network tab for API inspection, Console for state debugging, Sources for breakpoints, and Vue DevTools for component analysis were foundational.
-
-3. **Systematic Debugging**: Disciplined isolation of frontend vs. backend vs. browser issues prevented debugging rabbit holes.
-
-The most powerful workflow: **Context (design) → Cursor (implement) → DevTools (verify) → Human (decide)**. Combined with resilience in debugging and pragmatic scope management (removing Canvas), this approach enabled successful delivery of a complex full-stack application.
-
-**Key takeaway**: AI tools (Context for design, Cursor for coding) amplify productivity when used thoughtfully, but can't replace fundamental programming skills, DevTools expertise, and critical thinking.
